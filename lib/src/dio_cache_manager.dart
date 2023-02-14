@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio_http_cache/src/core/config.dart';
-import 'package:dio_http_cache/src/core/manager.dart';
+import 'package:dio_http_cache/src/core/cache_config.dart';
+import 'package:dio_http_cache/src/core/cache_manager.dart';
 import 'package:dio_http_cache/src/core/obj.dart';
 
 const DIO_CACHE_KEY_TRY_CACHE = "dio_cache_try_cache";
@@ -29,7 +29,7 @@ class DioCacheManager {
     _defaultRequestMethod = config.defaultRequestMethod;
   }
 
-  /// interceptor for http cache.
+  /// Interceptor for http cache.
   get interceptor {
     if (null == _interceptor) {
       _interceptor = InterceptorsWrapper(
@@ -38,35 +38,53 @@ class DioCacheManager {
     return _interceptor;
   }
 
-  _onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if ((options.extra[DIO_CACHE_KEY_TRY_CACHE] ?? false) != true) {
+  /// Triggered before a request is sent.
+  /// If [options].extra[DIO_CACHE_KEY_TRY_CACHE] is false or
+  /// [options].extra[DIO_CACHE_KEY_FORCE_REFRESH] is true proceed to execute
+  /// the API request, else return data present in cache (if present).
+  /// See [Interceptor.onRequest]
+  void _onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    if ((options.extra.containsKey(DIO_CACHE_KEY_TRY_CACHE) &&
+            options.extra[DIO_CACHE_KEY_TRY_CACHE] != true) ||
+        (options.extra.containsKey(DIO_CACHE_KEY_FORCE_REFRESH) &&
+            options.extra[DIO_CACHE_KEY_FORCE_REFRESH])) {
       return handler.next(options);
     }
-    if (true == options.extra[DIO_CACHE_KEY_FORCE_REFRESH]) {
-      return handler.next(options);
-    }
+
     var responseDataFromCache = await _pullFromCacheBeforeMaxAge(options);
-    if (null != responseDataFromCache) {
+
+    if (responseDataFromCache != null) {
       return handler.resolve(
           _buildResponse(
               responseDataFromCache, responseDataFromCache.statusCode, options),
           true);
     }
+
     return handler.next(options);
   }
 
-  _onResponse(Response response, ResponseInterceptorHandler handler) async {
+  /// If a successfull REST response in received (status > 200 && status < 300)
+  /// and [response].requestOptions.extra[DIO_CACHE_KEY_TRY_CACHE] is true
+  /// save the data received in cache.
+  /// See [Interceptor.onResponse]
+  void _onResponse(
+      Response response, ResponseInterceptorHandler handler) async {
     if ((response.requestOptions.extra[DIO_CACHE_KEY_TRY_CACHE] ?? false) ==
             true &&
         response.statusCode != null &&
-        response.statusCode! >= 200 &&
-        response.statusCode! < 300) {
+        response.statusCode! >= HttpStatus.ok &&
+        response.statusCode! < HttpStatus.multipleChoices) {
       await _pushToCache(response);
     }
+
     return handler.next(response);
   }
 
-  _onError(DioError e, ErrorInterceptorHandler handler) async {
+  /// REST request had an error, retrieve data previously successfully obtained
+  /// and cached if possible.
+  /// See [Interceptor.onError]
+  void _onError(DioError e, ErrorInterceptorHandler handler) async {
     if ((e.requestOptions.extra[DIO_CACHE_KEY_TRY_CACHE] ?? false) == true) {
       var responseDataFromCache =
           await _pullFromCacheBeforeMaxStale(e.requestOptions);
@@ -83,12 +101,12 @@ class DioCacheManager {
   Response _buildResponse(
       CacheObj obj, int? statusCode, RequestOptions options) {
     Headers? headers;
-    if (null != obj.headers) {
+    if (obj.headers != null) {
       headers = Headers.fromMap((Map<String, List<dynamic>>.from(
               jsonDecode(utf8.decode(obj.headers!))))
           .map((k, v) => MapEntry(k, List<String>.from(v))));
     }
-    if (null == headers) {
+    if (headers == null) {
       headers = Headers();
       options.headers.forEach((k, v) => headers!.add(k, v ?? ""));
     }
@@ -122,7 +140,7 @@ class DioCacheManager {
     RequestOptions options = response.requestOptions;
     Duration? maxAge = options.extra[DIO_CACHE_KEY_MAX_AGE];
     Duration? maxStale = options.extra[DIO_CACHE_KEY_MAX_STALE];
-    if (null == maxAge) {
+    if (maxAge == null) {
       _tryParseHead(response, maxStale, (_maxAge, _maxStale) {
         maxAge = _maxAge;
         maxStale = _maxStale;
@@ -143,13 +161,13 @@ class DioCacheManager {
     return _manager.pushToCache(obj);
   }
 
-  // try to get maxAge and maxStale from http headers
+  // Try to get maxAge and maxStale from HTTP headers
   void _tryParseHead(
       Response response, Duration? maxStale, _ParseHeadCallback callback) {
-    Duration? _maxAge;
+    Duration? maxAge;
     var cacheControl = response.headers.value(HttpHeaders.cacheControlHeader);
-    if (null != cacheControl) {
-      // try to get maxAge and maxStale from cacheControl
+    if (cacheControl != null) {
+      // Try to get maxAge and maxStale from "cache-control" header
       Map<String, String?> parameters;
       try {
         parameters = HeaderValue.parse(
@@ -157,43 +175,45 @@ class DioCacheManager {
                 parameterSeparator: ",",
                 valueSeparator: "=")
             .parameters;
-        _maxAge = _tryGetDurationFromMap(parameters, "s-maxage");
-        if (null == _maxAge) {
-          _maxAge = _tryGetDurationFromMap(parameters, "max-age");
+        maxAge = _tryGetDurationFromMap(parameters, "s-maxage");
+        if (maxAge == null) {
+          maxAge = _tryGetDurationFromMap(parameters, "max-age");
         }
         // if maxStale has valued, don't get max-stale anymore.
-        if (null == maxStale) {
+        if (maxStale == null) {
           maxStale = _tryGetDurationFromMap(parameters, "max-stale");
         }
       } catch (e) {
         print(e);
       }
     } else {
-      // try to get maxAge from expires
+      // Try to get maxAge from "expires" header
       var expires = response.headers.value(HttpHeaders.expiresHeader);
-      if (null != expires && expires.length > 4) {
+      if (expires != null && expires.length > 4) {
         DateTime? endTime;
         try {
           endTime = HttpDate.parse(expires).toLocal();
         } catch (e) {
           print(e);
         }
-        if (null != endTime && endTime.compareTo(DateTime.now()) >= 0) {
-          _maxAge = endTime.difference(DateTime.now());
+        if (endTime != null && endTime.compareTo(DateTime.now()) >= 0) {
+          maxAge = endTime.difference(DateTime.now());
         }
       }
     }
-    callback(_maxAge, maxStale);
+
+    callback(maxAge, maxStale);
   }
 
   Duration? _tryGetDurationFromMap(
       Map<String, String?> parameters, String key) {
     if (parameters.containsKey(key)) {
       var value = int.tryParse(parameters[key]!);
-      if (null != value && value >= 0) {
+      if (value != null && value >= 0) {
         return Duration(seconds: value);
       }
     }
+
     return null;
   }
 

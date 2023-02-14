@@ -1,21 +1,16 @@
 import 'dart:collection';
 
 import 'package:dio_http_cache/src/core/obj.dart';
-import 'package:dio_http_cache/src/store/store_impl.dart';
+import 'package:dio_http_cache/src/store/base/cache_store.dart';
 import 'package:quiver/cache.dart';
 
-class MemoryCacheStore extends ICacheStore {
+class MemoryCacheStore extends CacheStore {
   final int _maxMemoryCacheCount;
+  final Map<String, List<String>> _keys = HashMap();
   late MapCache<String, CacheObj> _mapCache;
-  late Map<String, List<String>> _keys;
 
   MemoryCacheStore(this._maxMemoryCacheCount) : super() {
-    _initMap();
-  }
-
-  _initMap() {
     _mapCache = MapCache.lru(maximumSize: _maxMemoryCacheCount);
-    _keys = HashMap();
   }
 
   @override
@@ -42,7 +37,10 @@ class MemoryCacheStore extends ICacheStore {
 
   @override
   Future<bool> clearAll() async {
-    _initMap();
+    // Reinstantiate _mapCache obhject to clear it
+    _mapCache = MapCache.lru(maximumSize: _maxMemoryCacheCount);
+    _keys.clear();
+
     return true;
   }
 

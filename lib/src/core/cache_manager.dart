@@ -1,16 +1,16 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:dio_http_cache/src/core/config.dart';
+import 'package:dio_http_cache/src/core/cache_config.dart';
 import 'package:dio_http_cache/src/core/obj.dart';
-import 'package:dio_http_cache/src/store/store_disk.dart';
-import 'package:dio_http_cache/src/store/store_impl.dart';
-import 'package:dio_http_cache/src/store/store_memory.dart';
+import 'package:dio_http_cache/src/store/base/cache_store.dart';
+import 'package:dio_http_cache/src/store/disk_cache_store.dart';
+import 'package:dio_http_cache/src/store/memory_cache_store.dart';
 
 class CacheManager {
   CacheConfig _config;
-  ICacheStore? _diskCacheStore;
-  ICacheStore? _memoryCacheStore;
+  CacheStore? _diskCacheStore;
+  CacheStore? _memoryCacheStore;
   late Utf8Encoder _utf8encoder;
 
   CacheManager(this._config) {
@@ -25,15 +25,19 @@ class CacheManager {
 
   Future<CacheObj?> _pullFromCache(String key, {String? subKey}) async {
     key = _convertMd5(key);
-    if (null != subKey) subKey = _convertMd5(subKey);
-    var obj = await _memoryCacheStore?.getCacheObj(key, subKey: subKey);
-    if (null == obj) {
-      obj = await _diskCacheStore?.getCacheObj(key, subKey: subKey);
-      if (null != obj) await _memoryCacheStore?.setCacheObj(obj);
+    if (subKey != null) {
+      subKey = _convertMd5(subKey);
     }
-    if (null != obj) {
+    var obj = await _memoryCacheStore?.getCacheObj(key, subKey: subKey);
+    if (obj == null) {
+      obj = await _diskCacheStore?.getCacheObj(key, subKey: subKey);
+      if (obj != null) {
+        await _memoryCacheStore?.setCacheObj(obj);
+      }
+    }
+    if (obj != null) {
       var now = DateTime.now().millisecondsSinceEpoch;
-      if (null != obj.maxStaleDate && obj.maxStaleDate! > 0) {
+      if (obj.maxStaleDate != null && obj.maxStaleDate! > 0) {
         //if maxStaleDate exist, Remove it if maxStaleDate expired.
         if (obj.maxStaleDate! < now) {
           await delete(key, subKey: subKey);
@@ -53,8 +57,8 @@ class CacheManager {
   Future<CacheObj?> pullFromCacheBeforeMaxAge(String key,
       {String? subKey}) async {
     var obj = await _pullFromCache(key, subKey: subKey);
-    if (null != obj &&
-        null != obj.maxAgeDate &&
+    if (obj != null &&
+        obj.maxAgeDate != null &&
         obj.maxAgeDate! < DateTime.now().millisecondsSinceEpoch) {
       return null;
     }
@@ -115,13 +119,14 @@ class CacheManager {
   }
 
   Future<bool> _getCacheFutureResult(
-      ICacheStore? memoryCacheStore,
-      ICacheStore? diskCacheStore,
+      CacheStore? memoryCacheStore,
+      CacheStore? diskCacheStore,
       Future<bool>? memoryCacheFuture,
       Future<bool>? diskCacheFuture) async {
-    var result1 =
-        (null == memoryCacheStore) ? true : (await memoryCacheFuture!);
-    var result2 = (null == diskCacheStore) ? true : (await diskCacheFuture!);
-    return result1 && result2;
+    var isCachedInMemory =
+        (memoryCacheStore == null) ? true : await memoryCacheFuture!;
+    var isCachedInDisk =
+        (diskCacheStore == null) ? true : await diskCacheFuture!;
+    return isCachedInMemory && isCachedInDisk;
   }
 }

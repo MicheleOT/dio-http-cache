@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:dio_http_cache/src/manager_dio.dart';
+import 'package:dio_http_cache/src/dio_cache_manager.dart';
 
 /// try to get maxAge and maxStale from response headers.
 /// local settings will always overview the value get from service.
@@ -31,7 +31,7 @@ Options buildCacheOptions(Duration maxAge,
         maxStale: maxStale,
         forceRefresh: forceRefresh);
 
-/// if null==maxAge, will try to get maxAge and maxStale from response headers.
+/// if [maxAge] is null, will try to get [maxAge] and [maxStale] from response headers.
 /// local settings will always overview the value get from service.
 Options buildConfigurableCacheOptions(
     {Options? options,
@@ -40,7 +40,7 @@ Options buildConfigurableCacheOptions(
     String? primaryKey,
     String? subKey,
     bool? forceRefresh}) {
-  if (null == options) {
+  if (options == null) {
     options = Options();
     options.extra = {};
   } else if (options.responseType == ResponseType.stream) {
@@ -49,19 +49,19 @@ Options buildConfigurableCacheOptions(
     options.extra = {};
   }
   options.extra!.addAll({DIO_CACHE_KEY_TRY_CACHE: true});
-  if (null != maxAge) {
+  if (maxAge != null) {
     options.extra!.addAll({DIO_CACHE_KEY_MAX_AGE: maxAge});
   }
-  if (null != maxStale) {
+  if (maxStale != null) {
     options.extra!.addAll({DIO_CACHE_KEY_MAX_STALE: maxStale});
   }
-  if (null != primaryKey) {
+  if (primaryKey != null) {
     options.extra!.addAll({DIO_CACHE_KEY_PRIMARY_KEY: primaryKey});
   }
-  if (null != subKey) {
+  if (subKey != null) {
     options.extra!.addAll({DIO_CACHE_KEY_SUB_KEY: subKey});
   }
-  if (null != forceRefresh) {
+  if (forceRefresh != null) {
     options.extra!.addAll({DIO_CACHE_KEY_FORCE_REFRESH: forceRefresh});
   }
   return options;

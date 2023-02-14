@@ -12,7 +12,7 @@ class CacheManagerPanel extends StatefulWidget {
 
 enum _Mode { clearByKey, clearByKeyAndSubKey, clearAll }
 
-class MyDiskStore implements ICacheStore {
+class MyDiskStore implements CacheStore {
   @override
   Future<bool> clearAll() {
     // TODO: implement clearAll

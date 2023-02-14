@@ -1,8 +1,10 @@
 import 'package:hive/hive.dart';
 
-import '../../dio_http_cache.dart';
+import 'package:dio_http_cache/dio_http_cache.dart';
 
-class DiskCacheStore extends ICacheStore {
+/// This implementation of [CacheStore] uses an Hive database to store data.
+/// See https://pub.dev/packages/hive for more infos
+class DiskCacheStore extends CacheStore {
   final String? _databasePath;
   final String _databaseName;
   final Encrypt? _encrypt;
@@ -23,8 +25,7 @@ class DiskCacheStore extends ICacheStore {
       if (null == path || path.length <= 0) {
         path = await PathHelper.getCurrentPath();
       }
-      // await Directory(path).create(recursive: true);
-      // path = join(path, "$_databaseName.hive");
+
       _db = await Hive.openLazyBox<Map>(_databaseName, path: path);
     }
     return _db;
@@ -37,18 +38,28 @@ class DiskCacheStore extends ICacheStore {
   @override
   Future<CacheObj?> getCacheObj(String key, {String? subKey}) async {
     var db = await _database;
-    if (null == db) return null;
+    if (db == null) {
+      return null;
+    }
+
     var dbKey = "$key.$subKey";
     var data = await db.get(dbKey);
-    if (data == null) return null;
+    if (data == null) {
+      return null;
+    }
+
     var result = data.cast<String, dynamic>();
+
     return await _decryptCacheObj(CacheObj.fromJson(result));
   }
 
   @override
   Future<bool> setCacheObj(CacheObj obj) async {
     var db = await _database;
-    if (null == db) return false;
+    if (db == null) {
+      return false;
+    }
+
     var content = await _encryptCacheStr(obj.content);
     var headers = await _encryptCacheStr(obj.headers);
 
@@ -78,21 +89,27 @@ class DiskCacheStore extends ICacheStore {
   @override
   Future<bool> clearExpired() async {
     var db = await _database;
+
+    if (db == null) {
+      return false;
+    }
+
     return _clearExpired(db);
   }
 
-  Future<bool> _clearExpired(LazyBox<Map>? db) async {
-    if (null == db) return false;
+  Future<bool> _clearExpired(LazyBox<Map> db) async {
     var now = DateTime.now().millisecondsSinceEpoch;
     for (var key in db.keys) {
       var data = await db.get(key);
-      if (null == data) {
+
+      if (data == null) {
         await db.delete(key);
       } else {
         var obj = CacheObj.fromJson(data.cast<String, dynamic>());
+
         if ((obj.maxStaleDate != null &&
                 obj.maxStaleDate! > 0 &&
-                obj.maxStaleDate! < DateTime.now().millisecondsSinceEpoch) ||
+                obj.maxStaleDate! < now) ||
             (obj.maxStaleDate == null &&
                 obj.maxAgeDate != null &&
                 obj.maxAgeDate! < now)) {
@@ -100,36 +117,49 @@ class DiskCacheStore extends ICacheStore {
         }
       }
     }
+
     return true;
   }
 
   @override
   Future<bool> clearAll() async {
     var db = await _database;
-    if (null == db) return false;
+    if (db == null) {
+      return false;
+    }
+
     await db.deleteAll(db.keys);
+
     return true;
   }
 
   Future<CacheObj> _decryptCacheObj(CacheObj obj) async {
     obj.content = await _decryptCacheStr(obj.content);
     obj.headers = await _decryptCacheStr(obj.headers);
+
     return obj;
   }
 
   Future<List<int>?> _decryptCacheStr(List<int>? bytes) async {
-    if (null == bytes) return null;
-    if (null != _decrypt) {
+    if (bytes == null) {
+      return null;
+    }
+
+    if (_decrypt != null) {
       bytes = await _decrypt!(bytes);
     }
+
     return bytes;
   }
 
   Future<List<int>?> _encryptCacheStr(List<int>? bytes) async {
-    if (null == bytes) return null;
-    if (null != _encrypt) {
+    if (bytes == null) {
+      return null;
+    }
+    if (_encrypt != null) {
       bytes = await _encrypt!(bytes);
     }
+
     return bytes;
   }
 }

@@ -1,3 +1,8 @@
+## [0.3.2] - 2023-02-14
+
+* Updated pubs
+* Commented code
+
 ## [0.3.0] - 2021-03-23
 
 * Migrated to nullsatefy with Dart 2.12

@@ -2,10 +2,6 @@
 
 [![Pub](https://img.shields.io/pub/v/dio_http_cache.svg?style=flat)](https://pub.dev/packages/dio_http_cache) 
 
-[中文介绍](./README_zh.md)
-
-!!!Cagatay There was not original support for this package.When dio package has offical support use that.This is only upgrade for dio package
-
 Dio-http-cache is a cache library for [Dio ( http client for flutter )](https://github.com/flutterchina/dio), like [Rxcache](https://github.com/VictorAlbertos/RxCache) in Android.
 
 Dio-http-cache uses [sqflite](https://github.com/tekartik/sqflite) as  disk cache, and  [LRU](https://github.com/google/quiver-dart) strategy as memory cache.
@@ -21,13 +17,13 @@ dependencies:
 
 ### QuickStart
 
-1. Add a dio-http-cache interceptor in Dio :
+1. Add a dio-http-cache interceptor in Dio:
 
    ```dart
    dio.interceptors.add(DioCacheManager(CacheConfig(baseUrl: "http://www.google.com")).interceptor);
    ```
 
-2. Set maxAge for a request :
+2. Set maxAge for a request:
 
    ```dart
    Dio().get(
@@ -38,11 +34,11 @@ dependencies:
 
 ### The advanced
 
-1. **Custom your config by buildCacheOptions :**
+1. **Custom your config by buildCacheOptions:**
   
    1. **primaryKey:** By default, `host + path` is used as the primaryKey, and you can also customize it.
    
-   2. **subKey:** By default, query ( data or queryParameters) is used as subKey, and you can specify  the subKey when it's necessary, for example:
+   2. **subKey:** By default, query (data or queryParameters) is used as subKey, and you can specify the subKey when it's necessary, for example:
    
       ```dart
       buildCacheOptions(Duration(days: 7), subKey: "page=1")
@@ -65,10 +61,10 @@ dependencies:
       1. Get data from network first.
       2. If getting data from network succeeds, store or refresh cache.
       3. If getting data from network fails or no network avaliable, **try** get data from cache instead of an error.
-   
+
 2. **Use "CacheConfig" to config default params**
 
-   1. **baseUrl:** it’s optional; If you don't have set baseUrl in CacheConfig, when you call `deleteCache`, you need provide full path like `"https://www.google.com/search?q=hello"`, but not just `"search?q=hello"`.
+   1. **baseUrl:** it’s optional; If you don't have set baseUrl in CacheConfig, when you call `deleteCache`, you need provide full path like `"https://www.google.com/search?q=hello"`, not just `"search?q=hello"`.
    2. **encrypt / decrypt:**  these two must be used together to encrypt the disk cache data, you can also zip data here.
    3. **defaultMaxAge:**  use `Duration(day:7)` as default.
    4. **defaultaMaxStale:** similar with DefaultMaxAge.
@@ -76,45 +72,46 @@ dependencies:
    6. **databaseName:** database name.
    7. **skipMemoryCache:** false defalut.
    8. **skipDiskCache:** false default.
-   9. **maxMemoryCacheCount:** 100 defalut.
+   9. **maxMemoryCacheCount:** 100 default.
    10. **defaultRequestMethod**: use "POST" as default, it will be used in `delete caches`.
    11. **diskStore**: custom disk storage.
 
+
 3. **How to clear expired cache**
 
-   * Just ignore it, that is automatic.
+Expired objects are cleared automatically when trying to fetch them, but if you really need to you can call `DioCacheManager.clearExpired();`
 
-   * But if you insist : `DioCacheManager.clearExpired();`
-
-4. **How to delete caches**
+1. **How to delete caches**
 
    1. No matter what subKey is, delete local cache if primary matched.
 
       ```dart
-      // Automatically parses primarykey from path
+      // Automatically parses primaryKey from path
       _dioCacheManager.deleteByPrimaryKey(path, requestMethod: "POST"); 
       ```
 
-   2. Delete local cache when both primaryKey and subKey matched.
+   2. Delete local cache when both primaryKey and subKey match.
 
       ```dart
       // delete local cache when both primaryKey and subKey matched.
       _dioCacheManager.deleteByPrimaryKeyAndSubKey(path, requestMethod: "GET"); 
       ```
 
-      **INPORTANT:** If you have additional parameters when requesting the http interface, you must take them with it, for example:
+      **IMPORTANT:** If you have additional parameters when requesting the http interface, you must take them with it, for example:
 
       ```dart
       _dio.get(_url, queryParameters: {'k': keyword}, 
       	options: buildCacheOptions(Duration(hours: 1)))
-      //delete the cache:
+
+      //delete the cache
       _dioCacheManager.deleteByPrimaryKeyAndSubKey(_url, requestMethod: "GET", queryParameters:{'k': keyword}); 
       ```
 
       ```dart
       _dio.post(_url, data: {'k': keyword}, 
       	options: buildCacheOptions(Duration(hours: 1)))
-      //delete the cache:
+
+      //delete the cache
       _dioCacheManager.deleteByPrimaryKeyAndSubKey(_url, requestMethod: "POST", data:{'k': keyword}); 
       ```
 
@@ -125,13 +122,13 @@ dependencies:
       _dioCacheManager.delete(primaryKey,{subKey,requestMethod});
       ```
 
-5. **How to clear All caches** (expired or not)
+2. **How to clear All caches** (expired or not)
 
    ```dart
    _dioCacheManager.clearAll();
    ```
    
-6. **How to know if the data come from Cache**
+3. **How to know if data come from Cache**
 
    ```dart
    if (null != response.headers.value(DIO_CACHE_HEADER_KEY_DATA_SOURCE)) {
@@ -140,7 +137,6 @@ dependencies:
 		// data come from net
    }
    ```
-
 
 ###  Example for maxAge and maxStale
 
@@ -155,7 +151,7 @@ _dio.post(
 )
 ```
 
-1. 0 ~ 3 days : Return data from cache directly (irrelevant with network).
+1. 0 ~ 3 days: Return data from cache directly (irrelevant with network).
 2. 3 ~ 7 days: 
    1. Get data from network first.
    2. If getting data from network succeeds, refresh cache.

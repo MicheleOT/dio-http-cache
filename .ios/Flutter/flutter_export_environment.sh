@@ -1,12 +1,12 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/Library/Development/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/cagatayyildirim/Documents/Repos_Local/core/external_packages/dio-http-cache"
+export "FLUTTER_ROOT=/Users/michele/Library/Developer/flutter"
+export "FLUTTER_APPLICATION_PATH=/Users/michele/projects/dio-http-cache"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"
-export "FLUTTER_BUILD_NAME=0.3.1"
-export "FLUTTER_BUILD_NUMBER=0.3.1"
+export "FLUTTER_BUILD_NAME=0.3.2"
+export "FLUTTER_BUILD_NUMBER=0.3.2"
 export "DART_OBFUSCATION=false"
 export "TRACK_WIDGET_CREATION=true"
 export "TREE_SHAKE_ICONS=false"

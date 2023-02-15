@@ -31,10 +31,8 @@ class DioCacheManager {
 
   /// Interceptor for http cache.
   get interceptor {
-    if (null == _interceptor) {
-      _interceptor = InterceptorsWrapper(
-          onRequest: _onRequest, onResponse: _onResponse, onError: _onError);
-    }
+    _interceptor ??= InterceptorsWrapper(
+        onRequest: _onRequest, onResponse: _onResponse, onError: _onError);
     return _interceptor;
   }
 
@@ -176,15 +174,11 @@ class DioCacheManager {
                 valueSeparator: "=")
             .parameters;
         maxAge = _tryGetDurationFromMap(parameters, "s-maxage");
-        if (maxAge == null) {
-          maxAge = _tryGetDurationFromMap(parameters, "max-age");
-        }
-        // if maxStale has valued, don't get max-stale anymore.
-        if (maxStale == null) {
-          maxStale = _tryGetDurationFromMap(parameters, "max-stale");
-        }
+        maxAge ??= _tryGetDurationFromMap(parameters, "max-age");
+        // if maxStale has value, don't get max-stale anymore.
+        maxStale ??= _tryGetDurationFromMap(parameters, "max-stale");
       } catch (e) {
-        print(e);
+        // Log the error?
       }
     } else {
       // Try to get maxAge from "expires" header
@@ -194,7 +188,7 @@ class DioCacheManager {
         try {
           endTime = HttpDate.parse(expires).toLocal();
         } catch (e) {
-          print(e);
+          // Log the error?
         }
         if (endTime != null && endTime.compareTo(DateTime.now()) >= 0) {
           maxAge = endTime.difference(DateTime.now());

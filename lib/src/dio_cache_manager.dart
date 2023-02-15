@@ -70,7 +70,7 @@ class DioCacheManager {
   /// See [Interceptor.onResponse]
   void _onResponse(
       Response response, ResponseInterceptorHandler handler) async {
-    if ((response.requestOptions.extra[DIO_CACHE_KEY_TRY_CACHE] ?? false) ==
+    if ((response.requestOptions.extra[DIO_CACHE_KEY_TRY_CACHE] ?? true) ==
             true &&
         response.statusCode != null &&
         response.statusCode! >= HttpStatus.ok &&

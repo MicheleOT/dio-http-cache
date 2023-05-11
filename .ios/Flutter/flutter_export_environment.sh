@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
 export "FLUTTER_ROOT=/Users/michele/Library/Developer/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/michele/projects/androidStudio/cremonini/chefexpress-app-mobile/Source/chefexpress_app_mobile/ext_libs/dio-http-cache"
+export "FLUTTER_APPLICATION_PATH=/Users/michele/projects/androidStudio/chefexpress/chefexpress-app-mobile/Source/chefexpress_app_mobile/ext_libs/dio-http-cache"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"
